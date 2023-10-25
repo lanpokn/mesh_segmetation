@@ -3,55 +3,51 @@ import numpy as np
 import networkx as nx
 import time
 from mesh_io import *
+from joblib import Parallel, delayed, parallel_backend
 class MeshSeg:
     def __init__(self, mesh):
         self.mesh = mesh
-        #neighbor_triangles_index is adjacency list
         self.neighbor_triangles_index = self.find_neighboring_triangles()
-        #dual graph: vertex i is tri i in mesh, edge i to j is dist from i to j
         self.dual_graph = self.generate_dual_graph()
+    
+    #find neighbor is a costly process, so I use joblib to accelerate
+    #it seems that I can't use joblib in dual graph, to be solved
     def find_neighboring_triangles(self):
         triangles = np.asarray(self.mesh.triangles)
         neighboring_triangles = []
-        
-        for i, current_triangle in enumerate(triangles):
-            vertices = set(current_triangle)
+
+        def process_triangle(i):
+            vertices = set(triangles[i])
             current_neighboring_triangles = []
-            
             for j, triangle in enumerate(triangles):
                 if i == j:
                     continue
-                
                 shared_vertices = vertices.intersection(set(triangle))
                 if len(shared_vertices) == 2:
                     current_neighboring_triangles.append(j)
-            
-            neighboring_triangles.append(current_neighboring_triangles)
-        
+            return current_neighboring_triangles
+
+        num_cores = -1  # Use all available cores
+        neighboring_triangles = Parallel(n_jobs=num_cores)(delayed(process_triangle)(i) for i in range(len(triangles)))
+
         return neighboring_triangles
+
     def generate_dual_graph(self):
-        # Extract vertex positions and triangle indices from the original mesh
         triangles = np.asarray(self.mesh.triangles)
-        # Create a new NetworkX graph for the dual representation
         G = nx.Graph()
-        # Add vertices (triangles) to the graph
         for i in range(len(triangles)):
             G.add_node(i)
-        # Compute the edge weights based on the distances between neighboring triangles
         for i, triangle in enumerate(triangles):
-            # Get the neighboring triangles for the current triangle
             neighboring_triangles = self.neighbor_triangles_index[i]
             for neighbor_triangle_index in neighboring_triangles:
-                # Compute the distance between the current triangle and its neighbor
                 neighbor_triangle = triangles[neighbor_triangle_index]
                 distance = self.compute_distance(triangle, neighbor_triangle)
-                # Add an edge between the current triangle and its neighbor with the computed distance as the weight
                 G.add_edge(i, neighbor_triangle_index, weight=distance)
         return G
-    #each triangle is a combine of three point
-    #there will be two points is the same in neaby, otherwise the algor is wrong    
-    def compute_distance(self,triangle,neighbor_triangle):
-        #debug
+
+    @staticmethod
+    def compute_distance(triangle, neighbor_triangle):
+        # Debug: return a constant value for demonstration
         return 1
     def Segmentation_Base(self,group_indices):
         new_group_indices =[] 
