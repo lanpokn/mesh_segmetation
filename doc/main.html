@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="曹耕晨">
+  <meta name="dcterms.date" content="2023-10-24">
+  <title>网格分割</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@^4//dist/reset.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@^4//dist/reveal.css">
+  <style>
+    .reveal .sourceCode {  /* see #7635 */
+      overflow: visible;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for citations */
+    div.csl-bib-body { }
+    div.csl-entry {
+      clear: both;
+      margin-bottom: 0em;
+    }
+    .hanging-indent div.csl-entry {
+      margin-left:2em;
+      text-indent:-2em;
+    }
+    div.csl-left-margin {
+      min-width:2em;
+      float:left;
+    }
+    div.csl-right-inline {
+      margin-left:2em;
+      padding-left:1em;
+    }
+    div.csl-indent {
+      margin-left: 2em;
+    }  </style>
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@^4//dist/theme/black.css" id="theme">
+  <link rel="stylesheet" href="revealjs.css"/>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide">
+  <h1 class="title">网格分割</h1>
+  <p class="author">曹耕晨</p>
+  <p class="date">2023-10-24</p>
+</section>
+
+<section>
+<section id="第一次大作业介绍" class="title-slide slide level1 center">
+<h1 class="center">第一次大作业介绍</h1>
+
+</section>
+<section id="要求" class="slide level2">
+<h2>要求</h2>
+<p>实现论文 Hierarchical Mesh Decomposition using Fuzzy Clustering and Cuts <span class="citation" data-cites="katzHierarchicalMeshDecomposition2003">(Katz and Tal 2003)</span> 中的网格分割算法</p>
+<ul>
+<li><p>输入: 三角面片模型</p>
+<ul>
+<li>PLY 格式 (只包含顶点与面)</li>
+<li>面片数大于 <span class="math inline">\(2000\)</span>, 不宜过于规整.</li>
+<li>总连通域个数较少.</li>
+</ul></li>
+<li><p>输出: 分割后的模型 (PLY 格式), 面片的颜色表示 Patch id</p></li>
+<li><p>语言: 不限定大家使用的编程语言.</p></li>
+</ul>
+</section>
+<section id="评分标准" class="slide level2">
+<h2>评分标准</h2>
+<ul>
+<li>80 – 84: 实现 0-1 分解</li>
+<li>85 – 89: 实现层次化 0-1 分解</li>
+<li>90 – 94: 实现 k 路分解</li>
+<li>95 – 100: 实现层次化 k 路分解</li>
+</ul>
+<p>根据实现效果在上述范围内调整分数, 有 bug 可能会扣分超过这个范围.</p>
+</section>
+<section id="作业检查" class="slide level2">
+<h2>作业检查</h2>
+<p>当面检查 + 提交到网络学堂.</p>
+<ul>
+<li><p>检查时间: 考试周 (因为这学期只上 15 周课, 所以应该是 16 – 17 周), 具体时间请留意网络学堂通知.</p></li>
+<li><p>检查要求: 展示程序运行结果, 讲解程序原理</p></li>
+<li><p>提交截止时间: 考试周最后一天.</p></li>
+<li><p>提交文件:</p>
+<ul>
+<li>源代码及可执行文件</li>
+<li>测试网格模型及运行结果</li>
+<li>项目报告: 包括原理说明, 代码结构说明 (包括每一步用了什么算法), 运行结果分析, 复杂度分析.</li>
+</ul></li>
+</ul>
+</section>
+<section id="学术诚信相关" class="slide level2">
+<h2>学术诚信相关</h2>
+<ul>
+<li>允许有参考, 禁止直接使用源码.</li>
+<li>允许使用第三方库进行面片读入/输出, 禁止直接使用第三方库进行分割</li>
+</ul>
+</section></section>
+<section>
+<section id="网格分割算法-katzhierarchicalmeshdecomposition2003" class="title-slide slide level1 center">
+<h1 class="center">网格分割算法 <span class="citation" data-cites="katzHierarchicalMeshDecomposition2003">(Katz and Tal 2003)</span></h1>
+
+</section>
+<section id="问题定义-k-路分解" class="slide level2">
+<h2>问题定义: k 路分解</h2>
+<ul>
+<li><p>k 路分解: 将原网格 <span class="math inline">\(S\)</span> 分解成 <span class="math inline">\(k\)</span> 个<em>片</em> <span class="math inline">\(S_1, S_2, \ldots, S_k\)</span>, 保证这些片每个都是连通的且互不相交</p>
+<div style="text-align: center">
+<p><img data-src="./figures/graphics_graduate_exercise_lesson_01.svg" /></p>
+</div></li>
+<li><p>0-1 分解: 上述情况中 <span class="math inline">\(k = 2\)</span> 的情况 (注意, 只是问题定义相同, 采用的算法是有区别的)</p></li>
+</ul>
+</section>
+<section id="问题定义-层次化分解" class="slide level2">
+<h2>问题定义: 层次化分解</h2>
+<p>把前一层分解得到的每一片再次进行分解, 直接递归进行即可.</p>
+<div style="text-align: center">
+<p><img data-src="./figures/graphics_graduate_exercise_lesson_02.svg" style="width:100.0%" /></p>
+</div>
+</section>
+<section id="整体框架" class="slide level2">
+<h2>整体框架</h2>
+<ol type="1">
+<li><p>生成带权对偶图, 及任意两个面片的最短距离 <span class="math inline">\(\text{Dist}(f_{i}, f_{j})\)</span>.</p></li>
+<li><p>递归得对于每一层执行:</p>
+<ol type="1">
+<li>确定 <span class="math inline">\(k\)</span> 个种子 (面片) <span class="math inline">\(\text{REP}_{i}, i \in \{1, \ldots, k\}\)</span>, 每个种子表示一个将要划分的片 <span class="math inline">\(S_{i}\)</span>.</li>
+<li>为每个面片 <span class="math inline">\(f_{i}\)</span> 计算属于每一片 <span class="math inline">\(S_{l}\)</span> 的概率.</li>
+<li>对比较确定的面片, 直接进行划分; 对模糊区域使用最小割算法来划分.</li>
+</ol></li>
+</ol>
+<p>具体的算法公式定义以及实现细节可以参考课堂 PPT 或原始论文 (会上传到网络学堂)</p>
+</section>
+<section id="带权对偶图" class="slide level2">
+<h2>带权对偶图</h2>
+<p>点变成面, 面变成点. 下图中黑色部分为原图, 蓝色部分为对偶图.</p>
+<div style="text-align: center">
+<p><img data-src="./figures/graphics_graduate_exercise_lesson_03.png" style="width:70.0%" /></p>
+</div>
+</section>
+<section id="权值计算" class="slide level2">
+<h2>权值计算</h2>
+<p>对于相邻的面片 <span class="math inline">\(f_{i}, f_{j}\)</span>, 分析</p>
+<ul>
+<li>角距离: <span class="math inline">\(\text{Ang\_Dist}(\alpha_{ij}) = \eta (1 - \cos \alpha_{ij})\)</span>. 凸的情况下 <span class="math inline">\(\eta = \epsilon \le 1\)</span>, 凹的情况下 <span class="math inline">\(\eta = 1\)</span>.</li>
+<li>测地线距离: <span class="math inline">\(\text{Geod\_Dict}\)</span>, 面片质心之间经过模型表面的最短连线.</li>
+<li>权值: <span class="math inline">\(\text{Weight}(f_{i}, f_{j}) = \delta \frac{\text{Geod\_Dict}(f_{i}, f_{j})}{\text{avg}(\text{Geod\_Dict})} + (1 - \delta) \frac{\text{Ang\_Dict}(\alpha_{ij})}{\text{avg}(\text{Ang\_Dict})}\)</span></li>
+</ul>
+</section>
+<section id="最短距离计算" class="slide level2">
+<h2>最短距离计算</h2>
+<p>有很多种最短路径算法. 参见 <a href="https://oi-wiki.org/graph/shortest-path" class="uri">https://oi-wiki.org/graph/shortest-path</a>, 自己挑一种实现就行.</p>
+</section>
+<section id="概率计算" class="slide level2">
+<h2>概率计算</h2>
+<p><span class="math display">\[P(f_{i} \in S_{j}) = \frac{\text{Dist}(f_{i}, \text{REP}_{j})^{-1}}{\sum_{1 \leq l \leq j} \text{Dist}(f_{i}, \text{REP}_{l})^{-1}}\]</span></p>
+<p>即面片 <span class="math inline">\(f_{i}\)</span> 跟 <span class="math inline">\(\text{REP}_{j}\)</span> 越近, 它属于片 <span class="math inline">\(S_{j}\)</span> 的可能性越高.</p>
+</section>
+<section id="分解-种子生成" class="slide level2">
+<h2>0-1 分解: 种子生成</h2>
+<p>0-1 分解的种子生成需要迭代多轮, 目标是最小化</p>
+<p><span class="math display">\[\sum_{1 \leq j \leq 2} \sum_{i} P(f_{i} \in S_{j}) \text{Dist}(f_{i}, \text{REP}_{k})\]</span></p>
+<p>这个公式的含义是最小化面片到种子距离的数学期望.</p>
+</section>
+<section id="分解-种子生成-1" class="slide level2">
+<h2>0-1 分解: 种子生成</h2>
+<ol type="1">
+<li><p>初始化两个种子为图上距离 (根据权值计算) 最远的两点.</p></li>
+<li><p>迭代进行下列操作:</p>
+<ol type="1">
+<li><p>根据当前的两个种子计算概率</p></li>
+<li><p>根据下方公式更新种子, 更新时认为 <span class="math inline">\(P(f_{i} \in S_{j})\)</span> 是定值.</p>
+<p><span class="math display">\[\begin{aligned}
+\text{REP}_{1} &amp;= \mathop{\mathrm{arg\,min}}_{\text{REP}_{1}} \sum_{i} P(f_{i} \in S_{1}) \text{Dist}(f_{i}, \text{REP}_{1}) \\
+\text{REP}_{2} &amp;= \mathop{\mathrm{arg\,min}}_{\text{REP}_{2}} \sum_{i} P(f_{i} \in S_{2}) \text{Dist}(f_{i}, \text{REP}_{2})
+\end{aligned}\]</span></p></li>
+<li><p>如果种子位置发生改变, 则重复上述操作; 否则结束.</p></li>
+</ol></li>
+</ol>
+</section>
+<section id="k-路分解-种子生成" class="slide level2">
+<h2>k 路分解: 种子生成</h2>
+<p>首先选一个距离所有面片距离和最小的面片. 之后的每一个种子 <span class="math inline">\(\text{REP}_{k}\)</span> 的选择要最大化到之前种子 <span class="math inline">\(\text{REP}_{i}\)</span> 的最小距离, 即</p>
+<p><span class="math display">\[\text{REP}_{k} = \mathop{\mathrm{arg\,max}}_{\text{REP}_{k}} \min_{i &lt; k} \text{Dist}(\text{REP}_{i}, \text{REP}_{k})\]</span></p>
+<p>还剩一个问题是如何选取 <span class="math inline">\(k\)</span>? 定义 <span class="math inline">\(G(k) := \min_{i &lt; k} \text{Dist}(\text{REP}_{i}, \text{REP}_{k})\)</span>, 经过实验发现在某个 <span class="math inline">\(k\)</span> 处 <span class="math inline">\(G(k)\)</span> 会发生急剧的下降, 我们选取最大化 <span class="math inline">\(G(k) - G(k + 1)\)</span> 的 <span class="math inline">\(k\)</span>.</p>
+<div style="text-align: center">
+<figure>
+<img data-src="./figures/graphics_graduate_exercise_lesson_04.svg" style="width:100.0%" alt="k = 3 的例子" />
+<figcaption aria-hidden="true"><span class="math inline">\(k = 3\)</span> 的例子</figcaption>
+</figure>
+</div>
+</section>
+<section id="分解区域划分-清晰部分" class="slide level2">
+<h2>0-1 分解区域划分: 清晰部分</h2>
+<p>如果一个面片 <span class="math inline">\(f_{i}\)</span> 属于片 <span class="math inline">\(S_{j}\)</span> 的概率大于 <span class="math inline">\(0.5 + \epsilon\)</span>, 就认为 <span class="math inline">\(f_{i}\)</span> 属于 <span class="math inline">\(S_{j}\)</span>.</p>
+<p>这样可以把所有面片分为三种: 属于片 <span class="math inline">\(S_{1}\)</span>, 属于片 <span class="math inline">\(S_{2}\)</span> 以及模糊部分.</p>
+</section>
+<section id="分解区域划分-模糊部分" class="slide level2">
+<h2>0-1 分解区域划分: 模糊部分</h2>
+<p>希望将模糊部分一分为二, 一半属于片 <span class="math inline">\(S_{1}\)</span>, 另一半属于片 <span class="math inline">\(S_{2}\)</span>.</p>
+<div style="text-align: center">
+<p><img data-src="./figures/graphics_graduate_exercise_lesson_05.svg" style="width:100.0%" /></p>
+</div>
+<p>我们规定切掉每条边的代价, 然后通过最小割算法来最小化这个代价.</p>
+</section>
+<section id="分解区域划分-模糊部分-1" class="slide level2">
+<h2>0-1 分解区域划分: 模糊部分</h2>
+<p>具体来说, 我们找出与模糊区域相邻的清晰面片集合 <span class="math inline">\(A_{1}, A_{2}\)</span>, <span class="math inline">\(A_{1}\)</span> 被包含于片 <span class="math inline">\(S_{1}\)</span>, <span class="math inline">\(A_{2}\)</span> 被包含于片 <span class="math inline">\(S_{2}\)</span>. 将 <span class="math inline">\(A_{1}\)</span> 与源点 <span class="math inline">\(S\)</span> 连接, 将 <span class="math inline">\(A_{2}\)</span> 与汇点 <span class="math inline">\(T\)</span> 连接, 然后规定一些代价 <span class="math inline">\(C_{i, j}\)</span></p>
+<p><span class="math display">\[C_{i, j} = \begin{cases} \frac{1}{1 + \frac{\text{Ang\_Dist}(\alpha_{ij})}{\text{avg}(\text{Ang\_Dist})}} &amp; i, j \neq S, T \\ \infty &amp; \text{otherwise} \end{cases}\]</span></p>
+<p>希望切到的边的代价之和最小.</p>
+</section>
+<section id="分解区域划分-模糊部分-2" class="slide level2">
+<h2>0-1 分解区域划分: 模糊部分</h2>
+<p>最大流最小割定理: 最大流等于最小割.</p>
+<p>把代价看成边 <span class="math inline">\(C_{i, j}\)</span> 之间允许的最大流量, 如果求得了从 <span class="math inline">\(S\)</span> 到 <span class="math inline">\(T\)</span> 的最大流量, 那么满流量的边构成了一个最小割 (这个说法不严谨, 但大概能这么理解).</p>
+<ol type="1">
+<li>求一个最大流分布.</li>
+<li>从源点出发通过 BFS 搜索所有不满流量的边</li>
+<li>BFS 涉及的模糊区域的面片都属于 <span class="math inline">\(S_{1}\)</span>, 剩余的模糊区域的面片属于片 <span class="math inline">\(S_{2}\)</span>.</li>
+</ol>
+<p>最大流算法参见 <a href="https://oi-wiki.org/graph/flow/max-flow/" class="uri">https://oi-wiki.org/graph/flow/max-flow/</a>.</p>
+</section>
+<section id="k-路分解区域划分-模糊部分" class="slide level2">
+<h2>k 路分解区域划分: 模糊部分</h2>
+<ol type="1">
+<li>如果面片 <span class="math inline">\(f_{i}\)</span> 属于 <span class="math inline">\(S_{j}\)</span> 的概率比属于其他面片的概率大很多, 就认为 <span class="math inline">\(f_{i}\)</span> 属于 <span class="math inline">\(S_{j}\)</span>.</li>
+<li>如果面片 <span class="math inline">\(f_{i}\)</span> 属于 <span class="math inline">\(S_{j}\)</span> 的概率跟属于 <span class="math inline">\(S_{l}\)</span> 的概率大于等于属于其他面片的概率, 但这二者接近, 就认为 <span class="math inline">\(f_{i}\)</span> 属于 <span class="math inline">\(S_{j}\)</span> 跟 <span class="math inline">\(S_{l}\)</span> 之间的模糊区域, 不考虑概率第三大的面片.</li>
+<li>对属于 <span class="math inline">\(S_{j}, S_{l}\)</span> 模糊区域的面片通过跟 0-1 分解一样的方法做分割.</li>
+</ol>
+<p>(这部分原论文一笔带过, 掺杂了个人理解, 仅供参考)</p>
+</section>
+<section id="层次化" class="slide level2">
+<h2>层次化</h2>
+<p>递归进行 0-1 分解/ k 路分解即可, 递归时注意进行终止条件判断:</p>
+<ul>
+<li>种子之间的距离小于某个阈值</li>
+<li>最大夹角跟最小夹角之间相差小于某个阈值</li>
+<li><span class="math inline">\(S_{j}\)</span> 中面片间的平均距离跟整个模型的面片间的平均距离之比小于某个阈值.</li>
+</ul>
+</section></section>
+<section>
+<section id="实践提示" class="title-slide slide level1 center">
+<h1 class="center">实践提示</h1>
+
+</section>
+<section id="实践提示-ply-文件" class="slide level2">
+<h2>实践提示: PLY 文件</h2>
+<p>PLY 是一种几何体图形文件格式, 开头描述文件排布及数据属性, 之后每一行表示一个元素 (点, 线, 面). 例如:</p>
+<pre class="ply"><code>ply
+format ascii 1.0
+comment 这是一个正四面体
+element vertex 4
+property float x
+property float y
+property float z
+element face 4
+property list uchar int vertex_index
+end_header
+0 3 0
+2.449 -1.0 -1.414
+0 -1 2.828
+-2.449 -1.0 -1.414
+3 0 1 3
+3 0 2 1
+3 0 3 2
+3 1 2 3</code></pre>
+</section>
+<section id="实践提示-ply-文件-1" class="slide level2">
+<h2>实践提示: PLY 文件</h2>
+<p>用第三方库也可以, 手写也可以. 可以考虑的第三方库有 (不限于这些):</p>
+<ul>
+<li>Assimp</li>
+<li>plyfile</li>
+<li>OpenMesh</li>
+</ul>
+<p>如果手写, 实现一个乞丐版 PLY 文件解析就行, 只需要处理顶点跟面的读入. 解析一下有多少个顶点, drop 掉开头的其余部分, 然后直接读就行.</p>
+</section>
+<section id="实践提示-ply-文件-2" class="slide level2">
+<h2>实践提示: PLY 文件</h2>
+<p>能查看 PLY 文件的软件:</p>
+<ul>
+<li>MeshLab</li>
+<li>CloudCompare</li>
+</ul>
+</section>
+<section id="实践提示-ply-文件-3" class="slide level2">
+<h2>实践提示: PLY 文件</h2>
+<p>可以在下面几个地方寻找网格模型:</p>
+<ul>
+<li><a href="https://accademia.stanford.edu/mich/" class="uri">https://accademia.stanford.edu/mich/</a></li>
+<li><a href="https://graphics.stanford.edu/data/3Dscanrep/" class="uri">https://graphics.stanford.edu/data/3Dscanrep/</a></li>
+<li><a href="https://shapenet.org/" class="uri">https://shapenet.org/</a></li>
+<li><a href="https://redwood-data.org/3dscan/" class="uri">https://redwood-data.org/3dscan/</a></li>
+</ul>
+</section>
+<section id="实践提示-种子生成" class="slide level2">
+<h2>实践提示: 种子生成</h2>
+<p>0-1 路分解种子生成这个算法不一定收敛 (我没证出来收敛性), 建议设置一个迭代次数上界. 如果你们证出来了可以写到实验报告里, 酌情加分.</p>
+</section>
+<section id="实践提示-模糊区域分割" class="slide level2">
+<h2>实践提示: 模糊区域分割</h2>
+<p>这部分如果采用 k 路分解, 可能会遇到一些奇怪的边界情况导致生成的同一片 <span class="math inline">\(S_{j}\)</span> 不连通之类的 (我没证出来这种情况不存在), 这一块我也没有解决办法. 解决不了不要死磕 (当然前提是你排除了 bug 这种因素), 这只是一个单纯的大作业.</p>
+</section>
+<section id="实践提示-时间复杂度" class="slide level2">
+<h2>实践提示: 时间复杂度</h2>
+<p>我用奔腾 10 代处理器来跑 k 路层次化分解, 四千多个面片 (兔子模型) 需要 25 秒. 最后别当面检查的时候一跑跑半天就行.</p>
+</section></section>
+<section id="提问环节" class="title-slide slide level1 center">
+<h1 class="center">提问环节</h1>
+
+</section>
+
+<section>
+<section id="reference" class="title-slide slide level1 center">
+<h1 class="center">Reference</h1>
+
+</section>
+<section id="reference-1" class="slide level2">
+<h2>Reference</h2>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-katzHierarchicalMeshDecomposition2003" class="csl-entry" role="listitem">
+Katz, Sagi, and Ayellet Tal. 2003. <span>“Hierarchical Mesh Decomposition Using Fuzzy Clustering and Cuts.”</span> <em>ACM Transactions on Graphics</em> 22 (3): 954–61. <a href="https://doi.org/10.1145/882262.882369">https://doi.org/10.1145/882262.882369</a>.
+</div>
+</div>
+</section></section>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/reveal.js@^4//dist/reveal.js"></script>
+
+  <!-- reveal.js plugins -->
+  <script src="https://unpkg.com/reveal.js@^4//plugin/notes/notes.js"></script>
+  <script src="https://unpkg.com/reveal.js@^4//plugin/search/search.js"></script>
+  <script src="https://unpkg.com/reveal.js@^4//plugin/zoom/zoom.js"></script>
+  <script src="https://unpkg.com/reveal.js@^4//plugin/math/math.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+        // Display controls in the bottom right corner
+        controls: true,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: true,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'bottom-right',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: true,
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: true,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'fade',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    </body>
+</html>
