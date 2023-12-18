@@ -49,7 +49,7 @@ class MeshSeg:
                 G.add_edge(i, neighbor_triangle_index, weight=distance)
         return G
 
-    @staticmethod
+    #@staticmethod
     def compute_distance(self,triangle_index, neighbor_triangle_index,sigma = 0.5,n = 0.01):
         #get alpha
         cos_alpha = 0
@@ -59,14 +59,10 @@ class MeshSeg:
         alpha = math.acos(cos_alpha)
         #get average point of triangle
         triangle = self.mesh.triangles[triangle_index]
-        vertex_indices = [triangle[0], triangle[1], triangle[2]]
-        vertices = self.mesh.vertices[vertex_indices]
-        average_vertex = vertices.mean(axis=0)
+        average_vertex = (mesh.vertices[triangle[0]] + mesh.vertices[triangle[1]] + mesh.vertices[triangle[2]]) / 3
         #get average point of neighbor triangle
         neighbor_triangle = self.mesh.triangles[neighbor_triangle_index]
-        neighbor_vertex_indices = [neighbor_triangle[0], neighbor_triangle[1], neighbor_triangle[2]]
-        neighbor_vertices = self.mesh.vertices[neighbor_vertex_indices]
-        average_vertex_neighbor = neighbor_vertices.mean(axis=0)
+        average_vertex_neighbor = (mesh.vertices[neighbor_triangle[0]] + mesh.vertices[neighbor_triangle[1]] + mesh.vertices[neighbor_triangle[2]]) / 3
         #TODO
         convex = 1
         #judge convex or concave:if concave,normal should intersect with another triangle
