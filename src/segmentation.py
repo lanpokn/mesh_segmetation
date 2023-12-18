@@ -36,7 +36,7 @@ class MeshSeg:
         return neighboring_triangles
     
     # dual graph, vertex i is same as triangle i, they have the same number
-    def generate_dual_graph(self,sigma = 0.5):
+    def generate_dual_graph(self,sigma = 0.1):
         triangles = np.asarray(self.mesh.triangles)
         G = nx.Graph()
         ang_dist_list = []
@@ -59,8 +59,8 @@ class MeshSeg:
         for i, triangle in enumerate(triangles):
             neighboring_triangles = self.neighbor_triangles_index[i]
             for neighbor_triangle_index in neighboring_triangles:
-                distance = ang_dist_graph[i][neighbor_triangle_index]/avg_ang_dist
-                distance +=geo_dist_graph[i][neighbor_triangle_index]/avg_geo_dist
+                distance = sigma*ang_dist_graph[i][neighbor_triangle_index]/avg_ang_dist
+                distance +=(1-sigma)*geo_dist_graph[i][neighbor_triangle_index]/avg_geo_dist
                 G.add_edge(i, neighbor_triangle_index, weight=distance)
         return G
     def draw_dual_graph(self):
