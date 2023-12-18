@@ -36,27 +36,42 @@ class MeshSeg:
         return neighboring_triangles
     
     # dual graph, vertex i is same as triangle i, they have the same number
-    def generate_dual_graph(self):
+    def generate_dual_graph(self,sigma = 0.5):
         triangles = np.asarray(self.mesh.triangles)
         G = nx.Graph()
+        ang_dist_list = []
+        geo_dist_list = []
+        ang_dist_graph = [[0 for i in range(len(triangles))] for j in range(len(triangles))]
+        geo_dist_graph = [[0 for i in range(len(triangles))] for j in range(len(triangles))]
         for i in range(len(triangles)):
             G.add_node(i)
         for i, triangle in enumerate(triangles):
             neighboring_triangles = self.neighbor_triangles_index[i]
             for neighbor_triangle_index in neighboring_triangles:
-                neighbor_triangle = triangles[neighbor_triangle_index]
-                distance = self.compute_distance(i, neighbor_triangle_index)
+                ang_dist,geo_dist = self.compute_distance(i, neighbor_triangle_index)
+                ang_dist_graph[i][neighbor_triangle_index] = ang_dist
+                geo_dist_graph[i][neighbor_triangle_index] = geo_dist
+                ang_dist_list.append(ang_dist)
+                geo_dist_list.append(geo_dist)
+        #enumrate again to give value to G
+        avg_ang_dist = (sum(ang_dist_list)) / (len(ang_dist_list))
+        avg_geo_dist = (sum(geo_dist_list)) / (len(geo_dist_list))
+        for i, triangle in enumerate(triangles):
+            neighboring_triangles = self.neighbor_triangles_index[i]
+            for neighbor_triangle_index in neighboring_triangles:
+                distance = ang_dist_graph[i][neighbor_triangle_index]/avg_ang_dist
+                distance +=geo_dist_graph[i][neighbor_triangle_index]/avg_geo_dist
                 G.add_edge(i, neighbor_triangle_index, weight=distance)
         return G
 
     #@staticmethod
-    def compute_distance(self,triangle_index, neighbor_triangle_index,sigma = 0.5,n = 0.01):
+    def compute_distance(self,triangle_index, neighbor_triangle_index,n = 0.1):
         #get alpha
         cos_alpha = 0
         cos_alpha +=self.normal[triangle_index][0]*self.normal[neighbor_triangle_index][0]
         cos_alpha +=self.normal[triangle_index][1]*self.normal[neighbor_triangle_index][1]
         cos_alpha +=self.normal[triangle_index][2]*self.normal[neighbor_triangle_index][2]
-        alpha = math.acos(cos_alpha)
+        #alpha = math.acos(cos_alpha)
         #get average point of triangle
         triangle = self.mesh.triangles[triangle_index]
         average_vertex = (mesh.vertices[triangle[0]] + mesh.vertices[triangle[1]] + mesh.vertices[triangle[2]]) / 3
@@ -66,7 +81,7 @@ class MeshSeg:
         #TODO
         convex = 1
         #judge convex or concave:if concave,normal should intersect with another triangle
-        if alpha == 0:
+        if cos_alpha == 1:
             convex = 1
         else:
             plane_normal = self.normal[triangle_index]
@@ -81,7 +96,15 @@ class MeshSeg:
                 convex = 0
             else:
                 convex = 1
-        return 1
+        if convex == 1:
+            ang_dist = n*(1-cos_alpha)
+        else:
+            ang_dist = 1*(1-cos_alpha)
+        geo_dist = 0
+        geo_dist +=average_vertex[0]*average_vertex_neighbor[0]
+        geo_dist +=average_vertex[1]*average_vertex_neighbor[1]
+        geo_dist +=average_vertex[2]*average_vertex_neighbor[2]
+        return ang_dist,geo_dist
     def Segmentation_Base(self,group_indices):
         new_group_indices =[] 
         #determin K num by 
