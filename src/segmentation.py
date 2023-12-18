@@ -63,6 +63,16 @@ class MeshSeg:
                 distance +=geo_dist_graph[i][neighbor_triangle_index]/avg_geo_dist
                 G.add_edge(i, neighbor_triangle_index, weight=distance)
         return G
+    def draw_dual_graph(self):
+        # ax = plt.figure().add_subplot(111, projection='3d')
+        pos = nx.spring_layout(self.dual_graph)
+        # nx.draw(self.dual_graph, pos=pos, with_labels=True, node_size=2, font_size=1,ax = ax)
+        # ax.view_init(elev=46, azim=33)
+        # plt.show()
+        nx.draw_networkx(self.dual_graph,pos=pos,node_size=2,with_labels=False)
+        plt.show()
+        return
+
 
     #@staticmethod
     def compute_distance(self,triangle_index, neighbor_triangle_index,n = 0.1):
@@ -158,7 +168,6 @@ if __name__ == "__main__":
 
     # Calculate the total time taken
     total_time = time.time() - start_time
-
-    # Print the total time
     print("Total time taken:", total_time, "seconds")
-    
+
+    mesh_seg_horse.draw_dual_graph()
