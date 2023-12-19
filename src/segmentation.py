@@ -152,6 +152,7 @@ class MeshSeg:
         distance_list = []
         node_list = []
         G_sub = self.dual_graph.subgraph(triangle_indices)
+        #TODO, when G_sub is too large, use random initial instead
         first_node ,_= self.find_extreme_nodes(G_sub)
         node_list.append(first_node)
         for i in range(0,9):
