@@ -1,3 +1,5 @@
+#hhq, 2023-12
+#TODO the pachage is a little ugly, try to abstract operation with numeric index?
 import open3d as o3d
 import numpy as np
 import networkx as nx
@@ -136,6 +138,15 @@ class MeshSeg:
             new_indices_list.extend(new_group_indices)
 
         return new_indices_list
+    #return a list , each element is a list of triangle index
+    def Segementation_recursion(self,recursion_time = 2):
+        triangle_indices_list = []
+        triangle_indice = self.get_all_triangle_indices()
+        triangle_indices_list.append(triangle_indice)
+        for i in range(0,recursion_time):
+            triangle_indices_list = self.Segmentation(triangle_indices_list)
+        return triangle_indices_list
+
     #determine K seeds,K no more than 10
     def Determine_kseed(self,triangle_indices):
         distance_list = []
@@ -175,7 +186,7 @@ class MeshSeg:
     #use it to find max/min node in dual graph
     #if target list is none, then compute average distance with all nodes
     #return optimal_node, distance
-    def find_extreme_nodes(G,target_node_list=None,find_min=True):
+    def find_extreme_nodes(self,G,target_node_list=None,find_min=True):
         #dijkstra_path_length(G, source, target, weight="weight")
         optimal_node = None
         if find_min == True:
@@ -233,8 +244,7 @@ if __name__ == "__main__":
     normal= get_normal_from_ply(ply_file)
     #show_mesh_and_normal(mesh,normal)
     mesh_seg_horse = MeshSeg(mesh,normal)
-    mesh_seg_horse.get_all_triangle_indices()
-
+    mesh_seg_horse.Segementation_recursion(1)
     # Calculate the total time taken
     total_time = time.time() - start_time
     print("Total time taken:", total_time, "seconds")
