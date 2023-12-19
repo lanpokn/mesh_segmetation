@@ -36,7 +36,7 @@ class MeshSeg:
         return neighboring_triangles
     
     # dual graph, vertex i is same as triangle i, they have the same number
-    def generate_dual_graph(self,sigma = 1):
+    def generate_dual_graph(self,sigma = 0.1):
         triangles = np.asarray(self.mesh.triangles)
         G = nx.Graph()
         ang_dist_list = []
@@ -115,24 +115,92 @@ class MeshSeg:
         geo_dist +=average_vertex[1]*average_vertex_neighbor[1]
         geo_dist +=average_vertex[2]*average_vertex_neighbor[2]
         return ang_dist,geo_dist
-    def Segmentation_Base(self,group_indices):
+    def Segmentation_Base(self,triangle_indices):
         new_group_indices =[] 
         #determin K num by 
+        seed_node_list = self.Determine_kseed(triangle_indices)
         return new_group_indices
 
-    def Segmentation(self, triangle_indices_group):
+    #in first iterate,
+    #probabilty is just average of 1/weight
+    def Segmentation(self, triangle_indices_list):
         # Segment the mesh based on the provided triangle indices group
-        new_groups = []
+        new_indices_list = []
         # to avoid repetitive computation, generate dual mesh first
 
-        for group_indices in triangle_indices_group:
+        for triangle_indices in triangle_indices_list:
             # Perform segmentation on each group of triangles
             # ... (your implementation here)
-            new_group_indices = self.Segmentation_Base(group_indices)
+            new_group_indices = self.Segmentation_Base(triangle_indices)
             # Add the new groups to the list
-            new_groups.extend(new_group_indices)
+            new_indices_list.extend(new_group_indices)
 
-        return new_groups
+        return new_indices_list
+    #determine K seeds,K no more than 10
+    def Determine_kseed(self,triangle_indices):
+        distance_list = []
+        node_list = []
+        G_sub = self.dual_graph.subgraph(triangle_indices)
+        first_node ,_= self.find_extreme_nodes(G_sub)
+        node_list.append(first_node)
+        for i in range(0,9):
+            node,distance = self.find_extreme_nodes(G_sub,node_list,find_min = False)
+            node_list.append(node)
+            distance_list.append(distance)
+        #find the longest descent
+        largest_descent_index = 9
+        #D(largest_descent_index)- D(largest_descent_index-1), but N(largest_descent_index+1)
+        #first node has no distance
+        optimal_distance = float('-inf')
+        for i in range(len(distance_list),1):
+            d_diff = distance_list[i]-distance_list[i-1]
+            if d_diff < optimal_distance:
+                optimal_distance = d_diff
+                largest_descent_index = i
+        node_list = node_list[:largest_descent_index]
+        # return initial seeds
+        return node_list
+        #get K number and corresponding initail seeds
+    def get_all_triangle_indices(self):
+        # Get the triangle indices
+        triangle_indices = []
+        for i in range (0,len(self.mesh.triangles)):
+            triangle_indices.append(i)
+        # Print the triangle indices
+        return triangle_indices
+            
+
+            
+    
+    #use it to find max/min node in dual graph
+    #if target list is none, then compute average distance with all nodes
+    #return optimal_node, distance
+    def find_extreme_nodes(G,target_node_list=None,find_min=True):
+        #dijkstra_path_length(G, source, target, weight="weight")
+        optimal_node = None
+        if find_min == True:
+            optimal_distance = float('inf')
+        else:
+            optimal_distance = float('-inf')
+
+        for node in G.nodes:
+            #find total distance
+            if target_node_list==None:
+                total_distance = sum(nx.single_source_dijkstra_path_length(G, node).values())
+            else:
+                total_distance = 0
+                for target in target_node_list:
+                    total_distance+=nx.dijkstra_path_length(G, node, target)
+            if find_min==True:
+                if total_distance < optimal_distance:
+                    optimal_distance = total_distance
+                    optimal_node = node
+            else:
+                if total_distance > optimal_distance:
+                    optimal_distance = total_distance
+                    optimal_node = node
+
+        return optimal_node, optimal_distance
 
 #used for test
 if __name__ == "__main__":
@@ -165,6 +233,7 @@ if __name__ == "__main__":
     normal= get_normal_from_ply(ply_file)
     #show_mesh_and_normal(mesh,normal)
     mesh_seg_horse = MeshSeg(mesh,normal)
+    mesh_seg_horse.get_all_triangle_indices()
 
     # Calculate the total time taken
     total_time = time.time() - start_time
