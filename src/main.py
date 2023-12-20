@@ -3,7 +3,7 @@ import time
 from mesh_io import *
 from segmentation import MeshSeg
 # Specify the path to your PLY file
-def test():
+def test_io():
     ply_file = "C:/Users/hhq/Desktop/mesh_segmentation/data/horse.ply"
 
     # Call the function to read the PLY file as a mesh
@@ -40,4 +40,4 @@ def main(ply_file):
 
     # Visualize the mesh with colors
     o3d.visualization.draw_geometries([mesh_with_colors])
-main("C:/Users/hhq/Desktop/mesh_segmentation/data/cat.ply")
+main("C:/Users/hhq/Desktop/mesh_segmentation/data/screwdriver.ply")

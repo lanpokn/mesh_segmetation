@@ -240,7 +240,7 @@ class MeshSeg:
         return triangle_indices_list
 
     #determine K seeds,K no more than 10
-    def Determine_kseed(self, triangle_indices,max_seed = 6):
+    def Determine_kseed(self, triangle_indices,max_seed = 2):
         distance_list = []
         node_list = []
         G_sub = self.dual_graph.subgraph(triangle_indices)
