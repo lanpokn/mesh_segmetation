@@ -99,12 +99,8 @@ def generate_color_palette(K):
 
 #mesh is the totol mesh data
 #triangle_indices_group have K triangle_indices，K is unknown
-def render_K_segmentation(mesh_om, triangle_indices_group):
+def render_K_segmentation(mesh, triangle_indices_group):
     # Generate a color palette of length K
-    # Convert to Open3D mesh
-    mesh = o3d.geometry.TriangleMesh()
-    mesh.vertices = o3d.utility.Vector3dVector(mesh_om.points())
-    mesh.triangles = o3d.utility.Vector3iVector(mesh_om.face_vertex_indices())
     
     K = len(triangle_indices_group)
     color_palette = generate_color_palette(K)
@@ -125,27 +121,6 @@ def render_K_segmentation(mesh_om, triangle_indices_group):
     # Visualize the mesh with different colors for each group
     #o3d.visualization.draw_geometries([mesh])
     return mesh
-# def render_K_segmentation_om(mesh, triangle_indices_group):
-#     # Generate a color palette of length K
-#     K = len(triangle_indices_group)
-#     color_palette = generate_color_palette(K)
-
-#     # Create an array to store the vertex colors
-#     vertex_colors = np.zeros((len(mesh.vertices), 3))
-
-#     # Assign colors to each group of triangles
-#     for i, indices in enumerate(triangle_indices_group):
-#         color = color_palette[i % K]  # Cycle through the color palette
-#         for index in indices:
-#             vertex_indices = mesh.triangles[index]
-#             vertex_colors[vertex_indices] = color
-
-#     # Assign the vertex colors to the mesh
-#     mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)
-
-#     # Visualize the mesh with different colors for each group
-#     #o3d.visualization.draw_geometries([mesh])
-#     return mesh
 if __name__ == "__main__":
     ply_file = "C:/Users/hhq/Desktop/mesh_segmentation/data/horse.ply"
     mesh = read_ply_as_openmesh(ply_file)

@@ -123,32 +123,78 @@ class MeshSeg:
         #determin K num by 
         seed_node_list = self.Determine_kseed(triangle_indices)
         new_group_indices = self.Calculate_groups(seed_node_list)
-        new_group_indices = self.Calculate_groups(seed_node_list)
         return new_group_indices
 
-    def Calculate_groups(self,seed_node_list,e=0):
-        #TODO use seed_node_list to segement
-        #first: just judge proba by distance, G.distances(x,x)[0][0]
-        #second, for fuzzy part use Maximum Flow Minimum Cut
-        #then all done!
-        #first dimen of it is the same as seed_node_list
-        #second dimen is nodes
+    def Calculate_groups(self, seed_node_list, e=0):
+        G = self.dual_graph
+        # Create a list to store the groups
         new_group_indices = []
+        #add seed to new_group_indices
+        #TODO change to numpy may accelerate?
+        for i in range(0,len(seed_node_list)):
+            temp = [seed_node_list[i]]
+            new_group_indices.append(temp) 
+        # Initialize the 3D list for fuzzy_group_indices
+        fuzzy_group_indices = [[[] for _ in range(len(seed_node_list))] for _ in range(len(seed_node_list))]
+    
+        # Iterate over each node in the graph
+        for node in G.vs:
+            # Calculate the distances from the node to each seed node
+            # when
+            distance = np.zeros(len(seed_node_list))
+            for i in range(0,len(seed_node_list)):
+                distance[i] = G.distances(node.index, seed_node_list[i])[0][0]
+
+            # Find the indices that would sort the 'distance' array
+            sorted_indices = np.argsort(distance)
+
+            # Find the minimum distance and its corresponding index
+            min_distance = distance[sorted_indices[0]]
+            #avoid finding it self
+            if min_distance == 0:
+                continue
+            min_index = sorted_indices[0]
+            probabilty = (1.0 / min_distance) / (np.sum(1.0 / distance))
+            # Find the second minimum distance and its corresponding index
+            second_min_index = sorted_indices[1]
+            #find threshold
+            threshold = 1/len(seed_node_list) + e
+            if probabilty > threshold:
+                new_group_indices[min_index].append(node.index)
+            else:
+                fuzzy_group_indices[min_index][second_min_index].append(node.index)
+                fuzzy_group_indices[second_min_index][min_index].append(node.index)
+        # Apply Maximum Flow Minimum Cut for the fuzzy part
+        # TODO
+        # for i in range(len(seed_node_list) - 1):
+        #     for j in range(i + 1, len(seed_node_list)):
+        #         # Create a directed graph based on the edges between the two groups
+        #         cut_graph = G.subgraph(new_group_indices[i] + new_group_indices[j])
+
+        #         # Calculate the maximum flow minimum cut
+        #         cut = cut_graph.maxflow_min_cut(capacity="weight")
+
+        #         # Update the fuzzy_group_indices based on the minimum cut
+        #         group1 = [v.index for v in cut_graph.vs if cut[v.index] == 0]
+        #         group2 = [v.index for v in cut_graph.vs if cut[v.index] == 1]
         return new_group_indices
     #in first iterate,
     #probabilty is just average of 1/weight
     def Segmentation(self, triangle_indices_list):
         # Segment the mesh based on the provided triangle indices group
         new_indices_list = []
+
         # to avoid repetitive computation, generate dual mesh first
 
         for triangle_indices in triangle_indices_list:
             # Perform segmentation on each group of triangles
-            # ... (your implementation here)
             new_group_indices = self.Segmentation_Base(triangle_indices)
-            # Add the new groups to the list
-            new_indices_list.extend(new_group_indices)
 
+            # Check if new_group_indices is not None before extending the list
+            if new_group_indices is not None:
+                new_indices_list.extend(new_group_indices)
+            else:
+                print("error,new_group_indices is None")
         return new_indices_list
     #return a list , each element is a list of triangle index
     def Segementation_recursion(self,recursion_time = 2):
@@ -255,9 +301,13 @@ if __name__ == "__main__":
     normal= get_normal_from_ply(ply_file)
     #show_mesh_and_normal(mesh,normal)
     mesh_seg_horse = MeshSeg(mesh,normal)
-    mesh_seg_horse.Segementation_recursion(1)
+    triangle_indices_list =  mesh_seg_horse.Segementation_recursion(1)
     # Calculate the total time taken
     total_time = time.time() - start_time
     print("Total time taken:", total_time, "seconds")
+    mesh_with_colors = render_K_segmentation(mesh, triangle_indices_list)
 
+
+    # Visualize the mesh with colors
+    o3d.visualization.draw_geometries([mesh_with_colors])
     # mesh_seg_horse.draw_dual_graph()
