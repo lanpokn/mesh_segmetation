@@ -123,13 +123,18 @@ class MeshSeg:
         #determin K num by 
         seed_node_list = self.Determine_kseed(triangle_indices)
         new_group_indices = self.Calculate_groups(seed_node_list)
-        return new_group_indices
         new_group_indices = self.Calculate_groups(seed_node_list)
+        return new_group_indices
+
     def Calculate_groups(self,seed_node_list,e=0):
         #TODO use seed_node_list to segement
         #first: just judge proba by distance, G.distances(x,x)[0][0]
         #second, for fuzzy part use Maximum Flow Minimum Cut
         #then all done!
+        #first dimen of it is the same as seed_node_list
+        #second dimen is nodes
+        new_group_indices = []
+        return new_group_indices
     #in first iterate,
     #probabilty is just average of 1/weight
     def Segmentation(self, triangle_indices_list):
