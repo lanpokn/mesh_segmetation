@@ -1,12 +1,13 @@
 #hhq, 2023-12
-#TODO the pachage is a little ugly, try to abstract operation with numeric index?
+#TODO the pachage is a little ugly, try to abstract?
 import open3d as o3d
 import numpy as np
-import networkx as nx
+import igraph as ig
 import time
 from mesh_io import *
 from joblib import Parallel, delayed, parallel_backend
 import math
+import random
 #openmesh is only used to find normal!not change too much 
 class MeshSeg:
     def __init__(self, mesh,normal = []):
@@ -38,40 +39,40 @@ class MeshSeg:
         return neighboring_triangles
     
     # dual graph, vertex i is same as triangle i, they have the same number
-    def generate_dual_graph(self,sigma = 0.1):
+    def generate_dual_graph(self, sigma=0.1):
         triangles = np.asarray(self.mesh.triangles)
-        G = nx.Graph()
+        G = ig.Graph()
         ang_dist_list = []
         geo_dist_list = []
-        ang_dist_graph = [[0 for i in range(len(triangles))] for j in range(len(triangles))]
-        geo_dist_graph = [[0 for i in range(len(triangles))] for j in range(len(triangles))]
+        ang_dist_graph = [[0 for _ in range(len(triangles))] for _ in range(len(triangles))]
+        geo_dist_graph = [[0 for _ in range(len(triangles))] for _ in range(len(triangles))]
+        
         for i in range(len(triangles)):
-            G.add_node(i)
+            G.add_vertex(i)
+        
         for i, triangle in enumerate(triangles):
             neighboring_triangles = self.neighbor_triangles_index[i]
             for neighbor_triangle_index in neighboring_triangles:
-                ang_dist,geo_dist = self.compute_distance(i, neighbor_triangle_index)
+                ang_dist, geo_dist = self.compute_distance(i, neighbor_triangle_index)
                 ang_dist_graph[i][neighbor_triangle_index] = ang_dist
                 geo_dist_graph[i][neighbor_triangle_index] = geo_dist
                 ang_dist_list.append(ang_dist)
                 geo_dist_list.append(geo_dist)
-        #enumrate again to give value to G
+
+        # Enumerate again to give value to G
         avg_ang_dist = (sum(ang_dist_list)) / (len(ang_dist_list))
         avg_geo_dist = (sum(geo_dist_list)) / (len(geo_dist_list))
+
         for i, triangle in enumerate(triangles):
             neighboring_triangles = self.neighbor_triangles_index[i]
             for neighbor_triangle_index in neighboring_triangles:
-                distance = sigma*ang_dist_graph[i][neighbor_triangle_index]/avg_ang_dist
-                distance +=(1-sigma)*geo_dist_graph[i][neighbor_triangle_index]/avg_geo_dist
+                distance = sigma * ang_dist_graph[i][neighbor_triangle_index] / avg_ang_dist
+                distance += (1 - sigma) * geo_dist_graph[i][neighbor_triangle_index] / avg_geo_dist
                 G.add_edge(i, neighbor_triangle_index, weight=distance)
+
         return G
     def draw_dual_graph(self):
-        # ax = plt.figure().add_subplot(111, projection='3d')
-        pos = nx.spring_layout(self.dual_graph)
-        # nx.draw(self.dual_graph, pos=pos, with_labels=True, node_size=2, font_size=1,ax = ax)
-        # ax.view_init(elev=46, azim=33)
-        # plt.show()
-        nx.draw_networkx(self.dual_graph,pos=pos,node_size=2,with_labels=False)
+        ig.plot(self.dual_graph, layout="kk", vertex_size=2, vertex_label=None)
         plt.show()
         return
 
@@ -152,15 +153,14 @@ class MeshSeg:
         distance_list = []
         node_list = []
         G_sub = self.dual_graph.subgraph(triangle_indices)
-        #TODO, when G_sub is too large, use random initial instead
         first_node ,_= self.find_extreme_nodes(G_sub)
         node_list.append(first_node)
-        for i in range(0,9):
+        for i in range(0,4):
             node,distance = self.find_extreme_nodes(G_sub,node_list,find_min = False)
             node_list.append(node)
             distance_list.append(distance)
         #find the longest descent
-        largest_descent_index = 9
+        largest_descent_index = 4
         #D(largest_descent_index)- D(largest_descent_index-1), but N(largest_descent_index+1)
         #first node has no distance
         optimal_distance = float('-inf')
@@ -187,33 +187,32 @@ class MeshSeg:
     #use it to find max/min node in dual graph
     #if target list is none, then compute average distance with all nodes
     #return optimal_node, distance
-    def find_extreme_nodes(self,G,target_node_list=None,find_min=True):
-        #dijkstra_path_length(G, source, target, weight="weight")
+    def find_extreme_nodes(self, G, target_node_list=None, find_min=True):
         optimal_node = None
-        if find_min == True:
+        if find_min:
             optimal_distance = float('inf')
         else:
             optimal_distance = float('-inf')
 
-        for node in G.nodes:
-            #find total distance
-            if target_node_list==None:
-                total_distance = sum(nx.single_source_dijkstra_path_length(G, node).values())
-            else:
-                total_distance = 0
-                for target in target_node_list:
-                    total_distance+=nx.dijkstra_path_length(G, node, target)
-            if find_min==True:
+        if target_node_list is None:
+            target_node_list = random.sample(range(G.vcount()), k=4)
+
+        for node in G.vs:
+            total_distance = 0
+            for target in target_node_list:
+                #temp = G.distances(node.index, target)
+                total_distance += G.distances(node.index, target)[0][0]
+
+            if find_min:
                 if total_distance < optimal_distance:
                     optimal_distance = total_distance
-                    optimal_node = node
+                    optimal_node = node.index
             else:
                 if total_distance > optimal_distance:
                     optimal_distance = total_distance
-                    optimal_node = node
+                    optimal_node = node.index
 
         return optimal_node, optimal_distance
-
 #used for test
 if __name__ == "__main__":
     # Create a more complicated mesh
@@ -250,4 +249,4 @@ if __name__ == "__main__":
     total_time = time.time() - start_time
     print("Total time taken:", total_time, "seconds")
 
-    mesh_seg_horse.draw_dual_graph()
+    # mesh_seg_horse.draw_dual_graph()
