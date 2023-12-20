@@ -87,10 +87,10 @@ class MeshSeg:
         #alpha = math.acos(cos_alpha)
         #get average point of triangle
         triangle = self.mesh.triangles[triangle_index]
-        average_vertex = (mesh.vertices[triangle[0]] + mesh.vertices[triangle[1]] + mesh.vertices[triangle[2]]) / 3
+        average_vertex = (self.mesh.vertices[triangle[0]] + self.mesh.vertices[triangle[1]] + self.mesh.vertices[triangle[2]]) / 3
         #get average point of neighbor triangle
         neighbor_triangle = self.mesh.triangles[neighbor_triangle_index]
-        average_vertex_neighbor = (mesh.vertices[neighbor_triangle[0]] + mesh.vertices[neighbor_triangle[1]] + mesh.vertices[neighbor_triangle[2]]) / 3
+        average_vertex_neighbor = (self.mesh.vertices[neighbor_triangle[0]] + self.mesh.vertices[neighbor_triangle[1]] + self.mesh.vertices[neighbor_triangle[2]]) / 3
         #TODO
         convex = 1
         #judge convex or concave:if concave,normal should intersect with another triangle
@@ -125,7 +125,7 @@ class MeshSeg:
         new_group_indices = self.Calculate_groups(seed_node_list,triangle_indices)
         return new_group_indices
 
-    def Calculate_groups(self,seed_node_list,triangle_indices, e=0.1):
+    def Calculate_groups(self,seed_node_list,triangle_indices, e=0):
         #bug, after generate sub
         G = self.dual_graph.subgraph(triangle_indices)
         # Create a list to store the groups
@@ -177,6 +177,7 @@ class MeshSeg:
 
             # If no connection is found
             return False
+        #TODO, mincut otfen fail, need further investigate
         for i in range(len(seed_node_list) - 1):
             for j in range(i + 1, len(seed_node_list)):
                 # Create a directed graph based on the edges between the two groups
@@ -239,7 +240,7 @@ class MeshSeg:
         return triangle_indices_list
 
     #determine K seeds,K no more than 10
-    def Determine_kseed(self, triangle_indices):
+    def Determine_kseed(self, triangle_indices,max_seed = 6):
         distance_list = []
         node_list = []
         G_sub = self.dual_graph.subgraph(triangle_indices)
@@ -247,20 +248,20 @@ class MeshSeg:
         first_node, _ = self.find_extreme_nodes(G_sub)
         node_list.append(first_node)
 
-        for i in range(0, 4):
+        for i in range(0, max_seed-1):
             node, distance = self.find_extreme_nodes(G_sub, node_list, find_min=False)
             node_list.append(node)
             distance_list.append(distance)
 
         # Find the longest descent
-        largest_descent_index = 4
+        largest_descent_index = max_seed
         optimal_distance = float('-inf')
 
-        for i in range(len(distance_list) - 1):
+        for i in range(len(distance_list),1):
             d_diff = distance_list[i] - distance_list[i - 1]
             if d_diff < optimal_distance:
                 optimal_distance = d_diff
-                largest_descent_index = i
+                largest_descent_index = i+1
 
         # Ensure the node list has unique elements
         node_list = list(set(node_list[:largest_descent_index]))
@@ -309,24 +310,6 @@ class MeshSeg:
         return optimal_node, optimal_distance
 #used for test
 if __name__ == "__main__":
-    # Create a more complicated mesh
-    # vertices = np.array([[0, 0, 0], [1, 0, 0], [2, 0, 0], [0, 1, 0], [1, 1, 0], [2, 1, 0]])
-    # triangles = np.array([[0, 1, 3], [1, 4, 3], [1, 2, 4], [2, 5, 4]])
-    # mesh = o3d.geometry.TriangleMesh()
-    # mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    # mesh.triangles = o3d.utility.Vector3iVector(triangles)
-
-    # # Create an instance of MeshSeg and pass the mesh
-    # mesh_seg = MeshSeg(mesh)
-
-    # # Access the dual graph
-    # dual_graph = mesh_seg.dual_graph
-
-    # # Print the nodes, edges, and weights of the dual graph
-    # for u, v, data in dual_graph.edges(data=True):
-    #     weight = data['weight']
-    #     print(f"Edge ({u}, {v}), Weight: {weight}")
-    
     ply_file = "C:/Users/hhq/Desktop/mesh_segmentation/data/horse.ply"
 
     # Start the timer
