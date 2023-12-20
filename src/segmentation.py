@@ -125,7 +125,7 @@ class MeshSeg:
         new_group_indices = self.Calculate_groups(seed_node_list,triangle_indices)
         return new_group_indices
 
-    def Calculate_groups(self,seed_node_list,triangle_indices, e=0):
+    def Calculate_groups(self,seed_node_list,triangle_indices, e=0.1):
         #bug, after generate sub
         G = self.dual_graph.subgraph(triangle_indices)
         # Create a list to store the groups
@@ -165,19 +165,52 @@ class MeshSeg:
             else:
                 fuzzy_group_indices[min_index][second_min_index].append(node['name'])
                 fuzzy_group_indices[second_min_index][min_index].append(node['name'])
+        
         # Apply Maximum Flow Minimum Cut for the fuzzy part
-        # TODO
-        # for i in range(len(seed_node_list) - 1):
-        #     for j in range(i + 1, len(seed_node_list)):
-        #         # Create a directed graph based on the edges between the two groups
-        #         cut_graph = G.subgraph(new_group_indices[i] + new_group_indices[j])
+        def is_connected(original_graph, group1_name_list, group2_name_list):
+            # Create a subgraph containing group1 vertices
+            # subgraph_group1 = original_graph.subgraph(group1_name_list)
+            # subgraph_group2 = original_graph.subgraph(group2_name_list)
+            # Check if group1 is connected to the i-th new group
+            if any(original_graph.are_connected(vertex, other_vertex) for vertex in group1_name_list for other_vertex in group2_name_list):
+                return True
 
-        #         # Calculate the maximum flow minimum cut
-        #         cut = cut_graph.maxflow_min_cut(capacity="weight")
+            # If no connection is found
+            return False
+        for i in range(len(seed_node_list) - 1):
+            for j in range(i + 1, len(seed_node_list)):
+                # Create a directed graph based on the edges between the two groups
+                if fuzzy_group_indices[i][j] == []:
+                    continue
+                cut_graph = G.subgraph(fuzzy_group_indices[min_index][second_min_index])
+                if cut_graph.ecount()<1:
+                    print("No edge in fuzzy part, give all fuzzy part to one side")
+                    new_group_indices[i].extend(fuzzy_group_indices[i][j])
+                    continue
+                # Calculate the maximum flow minimum cut
+                cut = cut_graph.mincut()
+                if not cut.partition:
+                    print("No valid mincut found, give all fuzzy part to one side")
+                    new_group_indices[i].extend(fuzzy_group_indices[i][j])
+                    # Handle this situation as needed
+                else:
+                    # Get the source and sink sets from the mincut result
+                    source_set = cut_graph.vs.select(cut.partition[0])
+                    sink_set = cut_graph.vs.select(cut.partition[1])
 
-        #         # Update the fuzzy_group_indices based on the minimum cut
-        #         group1 = [v.index for v in cut_graph.vs if cut[v.index] == 0]
-        #         group2 = [v.index for v in cut_graph.vs if cut[v.index] == 1]
+                    # Update the fuzzy_group_indices based on the minimum cut
+                    group1 = [v['name'] for v in source_set]
+                    group2 = [v['name'] for v in sink_set]
+                    # Update the fuzzy_group_indices based on the minimum cut
+
+                    # Update new_group_indices
+                    # here is to judge which part to conect 
+                    if is_connected(G,group1,new_group_indices[i]):
+                        new_group_indices[i].extend(group1)
+                        new_group_indices[j].extend(group2)
+                    else:
+                        new_group_indices[i].extend(group2)
+                        new_group_indices[j].extend(group1)
         return new_group_indices
     #in first iterate,
     #probabilty is just average of 1/weight
