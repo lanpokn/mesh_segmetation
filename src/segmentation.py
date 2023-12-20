@@ -48,7 +48,7 @@ class MeshSeg:
         geo_dist_graph = [[0 for _ in range(len(triangles))] for _ in range(len(triangles))]
         
         for i in range(len(triangles)):
-            G.add_vertex(i)
+            G.add_vertex(str(i))
         
         for i, triangle in enumerate(triangles):
             neighboring_triangles = self.neighbor_triangles_index[i]
@@ -68,7 +68,7 @@ class MeshSeg:
             for neighbor_triangle_index in neighboring_triangles:
                 distance = sigma * ang_dist_graph[i][neighbor_triangle_index] / avg_ang_dist
                 distance += (1 - sigma) * geo_dist_graph[i][neighbor_triangle_index] / avg_geo_dist
-                G.add_edge(i, neighbor_triangle_index, weight=distance)
+                G.add_edge(str(i), str(neighbor_triangle_index), weight=distance)
 
         return G
     def draw_dual_graph(self):
@@ -122,11 +122,12 @@ class MeshSeg:
         new_group_indices =[] 
         #determin K num by 
         seed_node_list = self.Determine_kseed(triangle_indices)
-        new_group_indices = self.Calculate_groups(seed_node_list)
+        new_group_indices = self.Calculate_groups(seed_node_list,triangle_indices)
         return new_group_indices
 
-    def Calculate_groups(self, seed_node_list, e=0):
-        G = self.dual_graph
+    def Calculate_groups(self,seed_node_list,triangle_indices, e=0):
+        #bug, after generate sub
+        G = self.dual_graph.subgraph(triangle_indices)
         # Create a list to store the groups
         new_group_indices = []
         #add seed to new_group_indices
@@ -143,7 +144,7 @@ class MeshSeg:
             # when
             distance = np.zeros(len(seed_node_list))
             for i in range(0,len(seed_node_list)):
-                distance[i] = G.distances(node.index, seed_node_list[i])[0][0]
+                distance[i] = G.distances(node['name'], seed_node_list[i])[0][0]
 
             # Find the indices that would sort the 'distance' array
             sorted_indices = np.argsort(distance)
@@ -160,10 +161,10 @@ class MeshSeg:
             #find threshold
             threshold = 1/len(seed_node_list) + e
             if probabilty > threshold:
-                new_group_indices[min_index].append(node.index)
+                new_group_indices[min_index].append(node['name'])
             else:
-                fuzzy_group_indices[min_index][second_min_index].append(node.index)
-                fuzzy_group_indices[second_min_index][min_index].append(node.index)
+                fuzzy_group_indices[min_index][second_min_index].append(node['name'])
+                fuzzy_group_indices[second_min_index][min_index].append(node['name'])
         # Apply Maximum Flow Minimum Cut for the fuzzy part
         # TODO
         # for i in range(len(seed_node_list) - 1):
@@ -189,8 +190,7 @@ class MeshSeg:
         for triangle_indices in triangle_indices_list:
             # Perform segmentation on each group of triangles
             new_group_indices = self.Segmentation_Base(triangle_indices)
-
-            # Check if new_group_indices is not None before extending the list
+            # in second iter, everyting goes wrong, but is in Segmentation_Base
             if new_group_indices is not None:
                 new_indices_list.extend(new_group_indices)
             else:
@@ -206,30 +206,34 @@ class MeshSeg:
         return triangle_indices_list
 
     #determine K seeds,K no more than 10
-    def Determine_kseed(self,triangle_indices):
+    def Determine_kseed(self, triangle_indices):
         distance_list = []
         node_list = []
         G_sub = self.dual_graph.subgraph(triangle_indices)
-        first_node ,_= self.find_extreme_nodes(G_sub)
+        
+        first_node, _ = self.find_extreme_nodes(G_sub)
         node_list.append(first_node)
-        for i in range(0,4):
-            node,distance = self.find_extreme_nodes(G_sub,node_list,find_min = False)
+
+        for i in range(0, 4):
+            node, distance = self.find_extreme_nodes(G_sub, node_list, find_min=False)
             node_list.append(node)
             distance_list.append(distance)
-        #find the longest descent
+
+        # Find the longest descent
         largest_descent_index = 4
-        #D(largest_descent_index)- D(largest_descent_index-1), but N(largest_descent_index+1)
-        #first node has no distance
         optimal_distance = float('-inf')
-        for i in range(len(distance_list),1):
-            d_diff = distance_list[i]-distance_list[i-1]
+
+        for i in range(len(distance_list) - 1):
+            d_diff = distance_list[i] - distance_list[i - 1]
             if d_diff < optimal_distance:
                 optimal_distance = d_diff
                 largest_descent_index = i
-        node_list = node_list[:largest_descent_index]
-        # return initial seeds
+
+        # Ensure the node list has unique elements
+        node_list = list(set(node_list[:largest_descent_index]))
+
+        # Return initial seeds
         return node_list
-        #get K number and corresponding initail seeds
     def get_all_triangle_indices(self):
         # Get the triangle indices
         triangle_indices = []
@@ -257,17 +261,17 @@ class MeshSeg:
         for node in G.vs:
             total_distance = 0
             for target in target_node_list:
-                #temp = G.distances(node.index, target)
-                total_distance += G.distances(node.index, target)[0][0]
+                #temp = G.distances(node['name'], target)
+                total_distance += G.distances(node['name'], target)[0][0]
 
             if find_min:
                 if total_distance < optimal_distance:
                     optimal_distance = total_distance
-                    optimal_node = node.index
+                    optimal_node = node['name']
             else:
                 if total_distance > optimal_distance:
                     optimal_distance = total_distance
-                    optimal_node = node.index
+                    optimal_node = node['name']
 
         return optimal_node, optimal_distance
 #used for test
@@ -301,7 +305,10 @@ if __name__ == "__main__":
     normal= get_normal_from_ply(ply_file)
     #show_mesh_and_normal(mesh,normal)
     mesh_seg_horse = MeshSeg(mesh,normal)
-    triangle_indices_list =  mesh_seg_horse.Segementation_recursion(1)
+    triangle_indices_list =  mesh_seg_horse.Segementation_recursion(2)
+    total_items = sum(len(sublist) for sublist in triangle_indices_list)
+
+    print(f"The 2D list has {total_items} items.")
     # Calculate the total time taken
     total_time = time.time() - start_time
     print("Total time taken:", total_time, "seconds")

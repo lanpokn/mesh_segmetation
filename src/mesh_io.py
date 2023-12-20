@@ -3,6 +3,7 @@ import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt 
 import openmesh as om
+import seaborn as sns
 def read_ply_as_mesh(ply_file):
     # Read the PLY file as a mesh
     mesh = o3d.io.read_triangle_mesh(ply_file)
@@ -87,16 +88,23 @@ def hsv_to_rgb(h, s, v):
     if i == 5:
         return v, p, q
 
+# def generate_color_palette(K):
+#     # Generate a color palette of length K
+#     color_palette = []
+#     for i in range(K):
+#         hue = i * (360 / K)  # Vary the hue value for each color
+#         rgb = hsv_to_rgb(hue / 360, 1, 1)  # Convert HSV to RGB
+#         color_palette.append(rgb)
+
+#     return color_palette
 def generate_color_palette(K):
-    # Generate a color palette of length K
-    color_palette = []
-    for i in range(K):
-        hue = i * (360 / K)  # Vary the hue value for each color
-        rgb = hsv_to_rgb(hue / 360, 1, 1)  # Convert HSV to RGB
-        color_palette.append(rgb)
-
+    # Use a seaborn color palette with K distinct colors
+    color_palette = sns.color_palette("husl", K)
+    
+    # Convert from [0, 1] to [0, 255]
+    #color_palette = [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in color_palette]
+    color_palette = [(r, g, b) for r, g, b in color_palette]
     return color_palette
-
 #mesh is the totol mesh data
 #triangle_indices_group have K triangle_indices，K is unknown
 def render_K_segmentation(mesh, triangle_indices_group):
@@ -112,7 +120,7 @@ def render_K_segmentation(mesh, triangle_indices_group):
     for i, indices in enumerate(triangle_indices_group):
         color = color_palette[i % K]  # Cycle through the color palette
         for index in indices:
-            vertex_indices = mesh.triangles[index]
+            vertex_indices = mesh.triangles[int(index)]
             vertex_colors[vertex_indices] = color
 
     # Assign the vertex colors to the mesh

@@ -7,7 +7,7 @@ ply_file = "C:/Users/hhq/Desktop/mesh_segmentation/data/horse.ply"
 mesh = read_ply_as_mesh(ply_file)
 
 # Specify the triangle indices for each group
-triangle_indices_group = [[0, 1, 2], [30, 40, 50], [600, 700, 800]]  # Example groups of triangle indices
+triangle_indices_group = [['0', '1', '2'], [30, 40, 50], [600, 700, 800]]  # Example groups of triangle indices
 
 # Call the function to render K segmentation with different colors for each group
 mesh_with_colors = render_K_segmentation(mesh, triangle_indices_group)
