@@ -47,7 +47,7 @@ The code is organized into various folders to manage different aspects of the pr
 
 The code structure facilitates a clear and modular organization, making it easier to understand and maintain. For detailed implementation, refer to the source code.![normal_is_right](.\fig\normal_is_right.jpg)
 
-# 运行结果分析
+# Result
 
 Time：
 
