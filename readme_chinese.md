@@ -48,7 +48,7 @@ src中，mesh_io.py是用于点云读入与展示的文件 main.py是运行示�
 
 其中，我半原创的凹凸性判断代码在Calculate_groups中 。其灵感主要来自于图形学中的ray，在normal都朝向物体外侧的前提下，用参数化直线的结果t判断两个面的关系。法向量的正确性已经经过了验证，如图：
 
-![normal_is_right](C:\Users\hhq\Desktop\mesh_segmentation\fig\normal_is_right.jpg)
+![normal_is_right](C:\Users\hhq\Desktop\mesh_segmentation\fig/normal_is_right.jpg)
 
 # 运行结果分析
 
@@ -62,21 +62,21 @@ src中，mesh_io.py是用于点云读入与展示的文件 main.py是运行示�
 
 单纯K分割：
 
-![body_mesh](C:\Users\hhq\Desktop\mesh_segmentation\fig\body_mesh.jpg)
+![body_mesh](C:\Users\hhq\Desktop\mesh_segmentation\fig/body_mesh.jpg)
 
-![cat](C:\Users\hhq\Desktop\mesh_segmentation\fig\cat.jpg)
+![cat](C:\Users\hhq\Desktop\mesh_segmentation\fig/cat.jpg)
 
-![screwdriver](C:\Users\hhq\Desktop\mesh_segmentation\fig\screwdriver.jpg)
+![screwdriver](C:\Users\hhq\Desktop\mesh_segmentation\fig/screwdriver.jpg)
 
 可以看到对于这种结构比较明显的mesh，一次K分割一般可以分的比较好
 
 层次化K分割：
 
-![recursive_cat](C:\Users\hhq\Desktop\mesh_segmentation\fig\recursive_cat.jpg)
+![recursive_cat](C:\Users\hhq\Desktop\mesh_segmentation\fig/recursive_cat.jpg)
 
 可以看到经过层次化K分割，更多的细节被分割了出来。不过由于第二次分割没有第一次的全局信息，这样往往不如第一次分割时强制取高K值的效果好。但是其优点的是更快（因为子mesh节点数量大幅度下降）
 
-![bunny](C:\Users\hhq\Desktop\mesh_segmentation\fig\bunny.jpg)
+![bunny](C:\Users\hhq\Desktop\mesh_segmentation\fig/bunny.jpg)
 
 # 复杂度分析
 

@@ -45,7 +45,7 @@ The code is organized into various folders to manage different aspects of the pr
 8. **Verification:**
    - The correctness of the normal vectors is validated through graphical representations, ensuring they point outward.
 
-The code structure facilitates a clear and modular organization, making it easier to understand and maintain. For detailed implementation, refer to the source code.![normal_is_right](fig\normal_is_right.jpg)
+The code structure facilitates a clear and modular organization, making it easier to understand and maintain. For detailed implementation, refer to the source code.![normal_is_right](fig/normal_is_right.jpg)
 
 # Result
 
@@ -59,17 +59,17 @@ Result：
 
 no recursive：
 
-![body_mesh](fig\body_mesh.jpg)
+![body_mesh](fig/body_mesh.jpg)
 
-![cat](fig\cat.jpg)
+![cat](fig/cat.jpg)
 
-![screwdriver](fig\screwdriver.jpg)
+![screwdriver](fig/screwdriver.jpg)
 
 recursive：
 
-![recursive_cat](fig\recursive_cat.jpg)
+![recursive_cat](fig/recursive_cat.jpg)
 
 
 
-![bunny](fig\bunny.jpg)
+![bunny](fig/bunny.jpg)
 
