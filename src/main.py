@@ -28,7 +28,7 @@ def main(ply_file):
     normal= get_normal_from_ply(ply_file)
     #show_mesh_and_normal(mesh,normal)
     mesh_seg_horse = MeshSeg(mesh,normal)
-    triangle_indices_list =  mesh_seg_horse.Segementation_recursion(1)
+    triangle_indices_list =  mesh_seg_horse.Segementation_recursion(2)
     total_items = sum(len(sublist) for sublist in triangle_indices_list)
 
     print(f"The 2D list has {total_items} items.")
@@ -40,4 +40,4 @@ def main(ply_file):
 
     # Visualize the mesh with colors
     o3d.visualization.draw_geometries([mesh_with_colors])
-main("C:/Users/hhq/Desktop/mesh_segmentation/data/screwdriver.ply")
+main("C:/Users/hhq/Desktop/mesh_segmentation/data/BodyMesh.ply")

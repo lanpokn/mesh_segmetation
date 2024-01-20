@@ -15,6 +15,7 @@ class MeshSeg:
         self.normal = normal
         self.neighbor_triangles_index = self.find_neighboring_triangles()
         self.dual_graph = self.generate_dual_graph()
+        self.firsttime = False
     
     #find neighbor is a costly process, so I use joblib to accelerate
     #it seems that I can't use joblib in dual graph, to be solved
@@ -240,7 +241,11 @@ class MeshSeg:
         return triangle_indices_list
 
     #determine K seeds,K no more than 10
-    def Determine_kseed(self, triangle_indices,max_seed = 2):
+    def Determine_kseed(self, triangle_indices,max_seed = 5):
+        if self.firsttime == False:
+            self.firsttime = True
+        else:
+            max_seed = 2
         distance_list = []
         node_list = []
         G_sub = self.dual_graph.subgraph(triangle_indices)
